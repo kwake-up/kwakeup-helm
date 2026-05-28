@@ -56,11 +56,16 @@ helm upgrade --install kwakeup oci://ghcr.io/kwake-up/kwakeup-helm \
   --set app.bootstrapAdmin.password=changeme
 ```
 
-The built-in PostgreSQL is enabled by default. The bootstrap admin password auto-generates if omitted — retrieve it with:
+The built-in PostgreSQL is enabled by default. The bootstrap admin password and encryption key auto-generate if omitted — retrieve them with:
 
 ```bash
+# Bootstrap admin password
 kubectl get secret kwakeup-bootstrap -n kwakeup \
   -o jsonpath='{.data.bootstrap-admin-password}' | base64 -d
+
+# Encryption key (protects stored cloud credentials — back this up)
+kubectl get secret kwakeup-encryption -n kwakeup \
+  -o jsonpath='{.data.encryption-key}' | base64 -d
 ```
 
 > For production, disable the built-in postgres, point the app at a managed database, and reference secrets externally. See [Installation](#installation).
