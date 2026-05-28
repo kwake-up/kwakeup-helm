@@ -408,7 +408,7 @@ eksctl utils associate-iam-oidc-provider \
 
 #### 2. Create the IAM policy
 
-Create a policy granting the permissions kwakeup needs (EC2 start/stop, RDS start/stop, ECS, etc.):
+Create a policy granting the permissions kwakeup needs:
 
 ```json
 {
@@ -420,23 +420,23 @@ Create a policy granting the permissions kwakeup needs (EC2 start/stop, RDS star
         "ec2:StartInstances",
         "ec2:StopInstances",
         "ec2:DescribeInstances",
-        "ec2:DescribeInstanceStatus",
-        "rds:StartDBCluster",
-        "rds:StopDBCluster",
         "rds:StartDBInstance",
         "rds:StopDBInstance",
-        "rds:DescribeDBClusters",
+        "rds:StartDBCluster",
+        "rds:StopDBCluster",
         "rds:DescribeDBInstances",
-        "ecs:UpdateService",
-        "ecs:DescribeServices",
-        "ecs:ListServices",
-        "ecs:ListClusters"
+        "rds:DescribeDBClusters",
+        "eks:ListClusters",
+        "eks:DescribeCluster",
+        "sts:GetCallerIdentity"
       ],
       "Resource": "*"
     }
   ]
 }
 ```
+
+> `eks:ListClusters` and `eks:DescribeCluster` are required for EKS cluster discovery (endpoint and CA certificate). `sts:GetCallerIdentity` is required for generating short-lived EKS bearer tokens via presigned STS URLs.
 
 ```bash
 aws iam create-policy \
@@ -569,13 +569,22 @@ serviceAccount:
 
 #### Cross-project scheduling
 
-To schedule resources in a **different GCP project**, grant the kwakeup service account the relevant roles on the target project:
+To schedule resources in a **different GCP project**, configure the target account in the kwakeup UI with `serviceAccountEmail` pointing to a service account in the target project. Then grant the kwakeup SA permission to impersonate it:
 
 ```bash
+# Allow kwakeup's SA to impersonate the target SA
+gcloud iam service-accounts add-iam-policy-binding \
+  target-sa@<target-project-id>.iam.gserviceaccount.com \
+  --role roles/iam.serviceAccountTokenCreator \
+  --member "serviceAccount:kwakeup@<kwakeup-project-id>.iam.gserviceaccount.com"
+
+# Grant the target SA the required roles in the target project
 gcloud projects add-iam-policy-binding <target-project-id> \
-  --member "serviceAccount:kwakeup@<kwakeup-project-id>.iam.gserviceaccount.com" \
+  --member "serviceAccount:target-sa@<target-project-id>.iam.gserviceaccount.com" \
   --role "roles/compute.instanceAdmin.v1"
 ```
+
+> `roles/iam.serviceAccountTokenCreator` is required for the kwakeup SA to generate short-lived tokens as the target SA. Without it, the impersonation call will return a 403.
 
 ---
 
@@ -618,24 +627,33 @@ CLIENT_ID=$(az identity show \
 ```bash
 SUBSCRIPTION_ID=$(az account show --query id -o tsv)
 
-# Virtual Machines (start/stop)
+# Virtual Machines — list + start/stop across the subscription
 az role assignment create \
   --assignee $CLIENT_ID \
   --role "Virtual Machine Contributor" \
   --scope /subscriptions/$SUBSCRIPTION_ID
 
-# Azure SQL / Flexible Server
+# Azure SQL — list servers + pause/resume databases across the subscription
 az role assignment create \
   --assignee $CLIENT_ID \
-  --role "Contributor" \
-  --scope /subscriptions/$SUBSCRIPTION_ID/resourceGroups/<resource-group>
+  --role "SQL DB Contributor" \
+  --scope /subscriptions/$SUBSCRIPTION_ID
 
-# AKS workloads
+# AKS — list clusters + authenticate to the cluster API across the subscription
+az role assignment create \
+  --assignee $CLIENT_ID \
+  --role "Azure Kubernetes Service Cluster User Role" \
+  --scope /subscriptions/$SUBSCRIPTION_ID
+
+# AKS — manage Deployments/StatefulSets within each cluster (Kubernetes RBAC via Azure)
+# Repeat for every AKS cluster kwakeup should schedule workloads in.
 az role assignment create \
   --assignee $CLIENT_ID \
   --role "Azure Kubernetes Service RBAC Writer" \
   --scope /subscriptions/$SUBSCRIPTION_ID/resourceGroups/<resource-group>/providers/Microsoft.ContainerService/managedClusters/<cluster-name>
 ```
+
+> The VM and SQL roles must be scoped at the **subscription** level because kwakeup scans resources across the entire subscription. `Azure Kubernetes Service Cluster User Role` is required at subscription scope to enumerate all AKS clusters; `Azure Kubernetes Service RBAC Writer` grants Kubernetes RBAC edit access and must be assigned per cluster.
 
 #### 4. Create the federated identity credential
 
@@ -662,12 +680,22 @@ podAnnotations:
 
 #### Cross-subscription scheduling
 
-To schedule resources in a **different Azure subscription**, assign the managed identity the relevant roles on the target subscription or resource group:
+To schedule resources in a **different Azure subscription**, assign the managed identity the same roles on the target subscription:
 
 ```bash
 az role assignment create \
   --assignee $CLIENT_ID \
   --role "Virtual Machine Contributor" \
+  --scope /subscriptions/<target-subscription-id>
+
+az role assignment create \
+  --assignee $CLIENT_ID \
+  --role "SQL DB Contributor" \
+  --scope /subscriptions/<target-subscription-id>
+
+az role assignment create \
+  --assignee $CLIENT_ID \
+  --role "Azure Kubernetes Service Cluster User Role" \
   --scope /subscriptions/<target-subscription-id>
 ```
 
