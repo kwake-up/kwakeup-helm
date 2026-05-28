@@ -51,9 +51,7 @@
 
 ```bash
 helm upgrade --install kwakeup oci://ghcr.io/kwake-up/kwakeup-helm \
-  --namespace kwakeup --create-namespace \
-  --set app.bootstrapAdmin.email=admin@example.com \
-  --set app.bootstrapAdmin.password=changeme
+  --namespace kwakeup --create-namespace 
 ```
 
 The built-in PostgreSQL is enabled by default. The bootstrap admin password and encryption key auto-generate if omitted — retrieve them with:
