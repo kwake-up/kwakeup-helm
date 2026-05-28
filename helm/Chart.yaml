@@ -14,9 +14,9 @@ keywords:
   - gcp
   - azure
   - kubernetes
-home: https://github.com/yourorg/kwakeup
+home: https://kwakeup.net
 sources:
-  - https://github.com/yourorg/kwakeup
+  - https://github.com/kwake-up/kwakeup-helm
 maintainers:
   - name: kwakeup
     email: support@kwakeup.net
