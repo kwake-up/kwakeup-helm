@@ -75,9 +75,23 @@ spec:
             - name: SESSION_IDLE_TTL
               value: {{ .Values.app.session.idleTTL | quote }}
             # ── CORS ────────────────────────────────────────────────────────
-            {{- if .Values.app.cors.allowedOrigins }}
+            {{- $origins := .Values.app.cors.allowedOrigins }}
+            {{- if and (not $origins) .Values.ingress.enabled .Values.ingress.hosts }}
+              {{- /* Auto-derive from ingress hosts + localhost defaults. */}}
+              {{- $list := list "http://localhost:3000" "http://localhost:5173" "http://localhost:8080" }}
+              {{- range .Values.ingress.hosts }}
+                {{- $host := .host }}
+                {{- $scheme := "http" }}
+                {{- range $.Values.ingress.tls }}
+                  {{- if has $host .hosts }}{{- $scheme = "https" }}{{- end }}
+                {{- end }}
+                {{- $list = append $list (printf "%s://%s" $scheme $host) }}
+              {{- end }}
+              {{- $origins = $list | join "," }}
+            {{- end }}
+            {{- if $origins }}
             - name: CORS_ALLOWED_ORIGINS
-              value: {{ .Values.app.cors.allowedOrigins | quote }}
+              value: {{ $origins | quote }}
             {{- end }}
             - name: CORS_ALLOWED_METHODS
               value: {{ .Values.app.cors.allowedMethods | quote }}
