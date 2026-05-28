@@ -69,3 +69,10 @@ Name of the OIDC client-secret Secret (managed by this chart).
 {{- define "kwakeup.oidcSecretName" -}}
 {{- default (printf "%s-oidc" (include "kwakeup.fullname" .)) .Values.app.oidc.existingSecret }}
 {{- end }}
+
+{{/*
+Name of the encryption-key Secret (managed by this chart or provided externally).
+*/}}
+{{- define "kwakeup.encryptionKeySecretName" -}}
+{{- default (printf "%s-encryption" (include "kwakeup.fullname" .)) .Values.app.encryptionKey.existingSecret }}
+{{- end }}
