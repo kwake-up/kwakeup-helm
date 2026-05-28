@@ -80,7 +80,7 @@ app:
   # Credentials are stored in a Secret; never set these in plaintext for production
   # — use existingSecret instead.
   bootstrapAdmin:
-    email: ""
+    email: "admin@local.me"
     password: ""
     # Name of a pre-existing Secret that contains the bootstrap credentials.
     # When set, `email` and `password` above are ignored and no Secret is created.
