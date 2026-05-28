@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "kwakeup.fullname" . }}
+  labels:
+    {{- include "kwakeup.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    # matchLabels must be stable across upgrades — use selectorLabels only,
+    # not the full labels (which include helm.sh/chart with the version).
+    matchLabels:
+      {{- include "kwakeup.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kwakeup.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "kwakeup.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: server
+          image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          env:
+            # ── Database ────────────────────────────────────────────────────
+            - name: DB_DIALECT
+              value: postgres
+            - name: DB_DSN
+            {{- if .Values.database.secretName }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.database.secretName }}
+                  key: {{ .Values.database.secretKey }}
+            {{- else if .Values.postgres.enabled }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kwakeup.fullname" . }}-postgres
+                  key: dsn
+            {{- else }}
+              value: {{ .Values.database.dsn | quote }}
+            {{- end }}
+            # ── Logging ─────────────────────────────────────────────────────
+            - name: LOG_LEVEL
+              value: {{ .Values.app.logLevel | quote }}
+            # ── Bootstrap admin ─────────────────────────────────────────────
+            {{- if .Values.app.bootstrapAdmin.email }}
+            - name: BOOTSTRAP_ADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kwakeup.bootstrapSecretName" . }}
+                  key: {{ .Values.app.bootstrapAdmin.secretKeys.email }}
+            - name: BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kwakeup.bootstrapSecretName" . }}
+                  key: {{ .Values.app.bootstrapAdmin.secretKeys.password }}
+            {{- end }}
+            # ── OIDC ────────────────────────────────────────────────────────
+            {{- if .Values.app.oidc.enabled }}
+            - name: OIDC_ISSUER
+              value: {{ .Values.app.oidc.issuer | quote }}
+            - name: OIDC_CLIENT_ID
+              value: {{ .Values.app.oidc.clientId | quote }}
+            - name: OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kwakeup.oidcSecretName" . }}
+                  key: {{ .Values.app.oidc.secretKey }}
+            {{- end }}
+            # ── Extra env vars ───────────────────────────────────────────────
+            {{- range $key, $value := .Values.app.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          {{- with .Values.app.envFrom }}
+          envFrom:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

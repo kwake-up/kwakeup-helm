@@ -1,0 +1,63 @@
+╔══════════════════════════════════════════════════════════╗
+║  kwakeup  {{ .Chart.AppVersion | printf "%-46s" }}║
+╚══════════════════════════════════════════════════════════╝
+
+Release : {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+
+── Access ──────────────────────────────────────────────────
+{{- if .Values.ingress.enabled }}
+{{- range .Values.ingress.hosts }}
+  {{ if $.Values.ingress.tls }}https{{ else }}http{{ end }}://{{ .host }}
+{{- end }}
+{{- else if eq .Values.service.type "NodePort" }}
+  export NODE_PORT=$(kubectl get svc -n {{ .Release.Namespace }} {{ include "kwakeup.fullname" . }} \
+    -o jsonpath='{.spec.ports[0].nodePort}')
+  export NODE_IP=$(kubectl get nodes \
+    -o jsonpath='{.items[0].status.addresses[0].address}')
+  echo "http://$NODE_IP:$NODE_PORT"
+{{- else if eq .Values.service.type "LoadBalancer" }}
+  (Wait a minute for the cloud load-balancer IP to be assigned, then:)
+  export LB_IP=$(kubectl get svc -n {{ .Release.Namespace }} {{ include "kwakeup.fullname" . }} \
+    -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+  echo "http://$LB_IP:{{ .Values.service.port }}"
+{{- else }}
+  kubectl port-forward -n {{ .Release.Namespace }} \
+    svc/{{ include "kwakeup.fullname" . }} 8080:{{ .Values.service.port }}
+  Open: http://localhost:8080
+{{- end }}
+
+── Warnings ────────────────────────────────────────────────
+{{- if and .Values.postgres.enabled (eq .Values.postgres.postgresPassword "changeme") }}
+
+  ⚠  INSECURE: postgres.postgresPassword is still "changeme".
+     Set a strong password before deploying to production.
+{{- end }}
+{{- if not .Values.app.bootstrapAdmin.email }}
+
+  ℹ  No bootstrap admin configured.
+     Set app.bootstrapAdmin.email + app.bootstrapAdmin.password
+     (or app.bootstrapAdmin.existingSecret) to create the first
+     admin user on startup.
+{{- end }}
+{{- if and (not .Values.database.secretName) (not .Values.postgres.enabled) (not .Values.database.dsn) }}
+
+  ⚠  No database configured. Set one of:
+       database.secretName  — references a pre-existing Secret (recommended)
+       database.dsn         — plaintext DSN (dev only)
+       postgres.enabled     — bundled PostgreSQL (dev/test only)
+{{- end }}
+
+── IRSA (AWS) ──────────────────────────────────────────────
+
+  To bind an IAM role for cloud-provider access add to your values:
+
+    serviceAccount:
+      annotations:
+        eks.amazonaws.com/role-arn: arn:aws:iam::<ACCOUNT>:role/<ROLE>
+
+── Useful commands ──────────────────────────────────────────
+
+  helm lint ./helm
+  helm template my-kwakeup ./helm --debug
+  helm upgrade --install my-kwakeup ./helm -f my-values.yaml
