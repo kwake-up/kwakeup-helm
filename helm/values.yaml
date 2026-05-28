@@ -1,45 +1,50 @@
 replicaCount: 1
+
 image:
-  repository: ghcr.io/yourorg/kwakeup
-  tag: "1.0.2"
+  repository: ghcr.io/kwake-up/kwakeup
+  tag: ""
   pullPolicy: IfNotPresent
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
+
 # ── Service account ─────────────────────────────────────────────────────────
 serviceAccount:
   create: true
   # Annotations added to the ServiceAccount — primary use-case is IRSA:
   #   eks.amazonaws.com/role-arn: arn:aws:iam::<ACCOUNT_ID>:role/<ROLE_NAME>
   annotations: {}
-  # Override the generated name. Defaults to the chart fullname.
   name: ""
+
 # ── Pod configuration ────────────────────────────────────────────────────────
 podAnnotations: {}
-# prometheus.io/scrape: "true"
-# prometheus.io/port: "8080"
+  # prometheus.io/scrape: "true"
+  # prometheus.io/port: "8080"
 
 podSecurityContext:
   runAsNonRoot: true
-  runAsUser: 65534 # nobody
+  runAsUser: 65534    # nobody
   fsGroup: 65534
+
 securityContext:
   allowPrivilegeEscalation: false
   readOnlyRootFilesystem: true
   capabilities:
     drop: [ALL]
+
 # ── Service ──────────────────────────────────────────────────────────────────
 service:
   type: ClusterIP
   port: 8080
+
 # ── Ingress ──────────────────────────────────────────────────────────────────
 ingress:
   enabled: false
-  # Ingress class (replaces the deprecated kubernetes.io/ingress.class annotation)
   className: ""
   annotations: {}
-  # cert-manager.io/cluster-issuer: letsencrypt-prod
-  # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
   hosts:
     - host: chart-example.local
       paths:
@@ -49,6 +54,7 @@ ingress:
   # - secretName: kwakeup-tls
   #   hosts:
   #     - chart-example.local
+
 # ── Resource requests/limits ─────────────────────────────────────────────────
 # No CPU limit intentionally — avoids throttling. Set one if your cluster
 # enforces LimitRange policies.
@@ -58,17 +64,26 @@ resources:
     memory: 128Mi
   limits:
     memory: 256Mi
+
 # ── Scheduling ───────────────────────────────────────────────────────────────
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
 # ── PodDisruptionBudget ──────────────────────────────────────────────────────
 pdb:
   enabled: false
   minAvailable: 1
+
 # ── Application configuration ────────────────────────────────────────────────
 app:
-  logLevel: info
+  # HTTP listen address.
+  httpAddr: ":8080"
+
+  # Logging
+  logLevel: info    # trace | debug | info | warn | error
+  logPretty: false  # set true for human-readable console output in dev
+
   # Encryption key for secrets stored in the database (cloud account credentials).
   # Leave value empty to auto-generate a random key on first install.
   # Set existingSecret to skip Secret creation and reference a pre-existing Secret instead.
@@ -76,36 +91,69 @@ app:
     value: ""
     existingSecret: ""
     secretKey: encryption-key
+
+  # Session TTLs (Go duration strings: e.g. 30m, 8h, 24h).
+  session:
+    absoluteTTL: "24h"
+    idleTTL: "30m"
+
+  # CORS — set allowedOrigins to your frontend URL(s) in production.
+  # Leaving allowedOrigins empty falls back to localhost defaults (dev only).
+  cors:
+    allowedOrigins: ""   # e.g. "https://app.example.com" — REQUIRED in production
+    allowedMethods: "GET,POST,PUT,DELETE,OPTIONS"
+    maxAge: "12h"
+
+  # Background resource scan
+  scan:
+    intervalMinutes: 30    # 0 disables the background scan
+    minRetentionRatio: "0.80"  # safety threshold: abort stale cleanup if scan looks truncated
+
   # Bootstrap admin — used only on the very first startup when the DB is empty.
   # Credentials are stored in a Secret; never set these in plaintext for production
   # — use existingSecret instead.
   bootstrapAdmin:
-    email: "admin@local.me"
+    email: ""
     password: ""
-    # Name of a pre-existing Secret that contains the bootstrap credentials.
-    # When set, `email` and `password` above are ignored and no Secret is created.
     existingSecret: ""
     secretKeys:
       email: bootstrap-admin-email
       password: bootstrap-admin-password
-  # OIDC / SSO (optional)
+
+  # OIDC / SSO (optional) — all fields required when enabled.
   oidc:
     enabled: false
-    issuer: ""
+    issuer: ""       # must be an https:// URL
     clientId: ""
+    redirectUrl: ""  # e.g. "https://app.example.com/auth/oidc/callback"
+    groupsClaim: "groups"
     # clientSecret is stored in a Secret. Use existingSecret for production.
     clientSecret: ""
     existingSecret: ""
     secretKey: oidc-client-secret
+
+  # SAML 2.0 (optional) — all fields required when enabled.
+  saml:
+    enabled: false
+    idpMetadataUrl: ""   # URL to the IdP metadata XML
+    spEntityId: ""       # Service Provider entity ID
+    spAcsUrl: ""         # Assertion Consumer Service URL
+    # spCert and spKey are stored in a Secret. Use existingSecret for production.
+    spCert: ""           # PEM-encoded SP certificate
+    spKey: ""            # PEM-encoded SP private key
+    existingSecret: ""
+    secretKeys:
+      cert: saml-sp-cert
+      key: saml-sp-key
+
   # Freeform extra environment variables injected into the app container.
-  # Example:
-  #   SCAN_MIN_RETENTION_RATIO: "0.8"
-  #   SCAN_INTERVAL_MINUTES: "30"
   env: {}
+
   # envFrom sources (ConfigMaps or Secrets) mounted wholesale.
   envFrom: []
   # - secretRef:
   #     name: my-app-secrets
+
 # ── Built-in PostgreSQL ───────────────────────────────────────────────────────
 # For development and quick-start only. For production use an external managed
 # database and configure `database.dsn` or `database.secretName`.
@@ -116,7 +164,7 @@ postgres:
     tag: "16-alpine"
     pullPolicy: IfNotPresent
   postgresUser: kwakeup
-  postgresPassword: "changeme" # ← change this
+  postgresPassword: "changeme"   # ← change this
   postgresDatabase: kwakeupdb
   service:
     port: 5432
@@ -124,7 +172,7 @@ postgres:
     enabled: true
     accessMode: ReadWriteOnce
     size: 8Gi
-    storageClassName: "" # leave empty to use the cluster default
+    storageClassName: ""
   resources:
     requests:
       cpu: 100m
@@ -133,14 +181,14 @@ postgres:
       memory: 512Mi
   podSecurityContext:
     runAsNonRoot: true
-    runAsUser: 999 # postgres
+    runAsUser: 999    # postgres
     fsGroup: 999
+
 # ── External database ────────────────────────────────────────────────────────
 database:
   # Full DSN passed as a plaintext env var (not recommended for production).
   # Example: "host=db.example.com port=5432 user=kwakeup password=secret dbname=kwakeup sslmode=require"
   dsn: ""
   # Recommended: reference a pre-existing Secret instead.
-  # The Secret must have a key whose value is the full DSN string.
   secretName: ""
   secretKey: db_dsn

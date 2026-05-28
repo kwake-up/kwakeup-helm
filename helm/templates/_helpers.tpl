@@ -76,3 +76,10 @@ Name of the encryption-key Secret (managed by this chart or provided externally)
 {{- define "kwakeup.encryptionKeySecretName" -}}
 {{- default (printf "%s-encryption" (include "kwakeup.fullname" .)) .Values.app.encryptionKey.existingSecret }}
 {{- end }}
+
+{{/*
+Name of the SAML SP cert/key Secret (managed by this chart or provided externally).
+*/}}
+{{- define "kwakeup.samlSecretName" -}}
+{{- default (printf "%s-saml" (include "kwakeup.fullname" .)) .Values.app.saml.existingSecret }}
+{{- end }}

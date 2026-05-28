@@ -7,8 +7,6 @@ metadata:
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
-    # matchLabels must be stable across upgrades — use selectorLabels only,
-    # not the full labels (which include helm.sh/chart with the version).
     matchLabels:
       {{- include "kwakeup.selectorLabels" . | nindent 6 }}
   template:
@@ -63,9 +61,33 @@ spec:
                 secretKeyRef:
                   name: {{ include "kwakeup.encryptionKeySecretName" . }}
                   key: {{ .Values.app.encryptionKey.secretKey }}
+            # ── Server ──────────────────────────────────────────────────────
+            - name: HTTP_ADDR
+              value: {{ .Values.app.httpAddr | quote }}
             # ── Logging ─────────────────────────────────────────────────────
             - name: LOG_LEVEL
               value: {{ .Values.app.logLevel | quote }}
+            - name: LOG_PRETTY
+              value: {{ .Values.app.logPretty | quote }}
+            # ── Session ─────────────────────────────────────────────────────
+            - name: SESSION_ABSOLUTE_TTL
+              value: {{ .Values.app.session.absoluteTTL | quote }}
+            - name: SESSION_IDLE_TTL
+              value: {{ .Values.app.session.idleTTL | quote }}
+            # ── CORS ────────────────────────────────────────────────────────
+            {{- if .Values.app.cors.allowedOrigins }}
+            - name: CORS_ALLOWED_ORIGINS
+              value: {{ .Values.app.cors.allowedOrigins | quote }}
+            {{- end }}
+            - name: CORS_ALLOWED_METHODS
+              value: {{ .Values.app.cors.allowedMethods | quote }}
+            - name: CORS_MAX_AGE
+              value: {{ .Values.app.cors.maxAge | quote }}
+            # ── Scan ────────────────────────────────────────────────────────
+            - name: SCAN_INTERVAL_MINUTES
+              value: {{ .Values.app.scan.intervalMinutes | quote }}
+            - name: SCAN_MIN_RETENTION_RATIO
+              value: {{ .Values.app.scan.minRetentionRatio | quote }}
             # ── Bootstrap admin ─────────────────────────────────────────────
             {{- if .Values.app.bootstrapAdmin.email }}
             - name: BOOTSTRAP_ADMIN_EMAIL
@@ -90,6 +112,29 @@ spec:
                 secretKeyRef:
                   name: {{ include "kwakeup.oidcSecretName" . }}
                   key: {{ .Values.app.oidc.secretKey }}
+            - name: OIDC_REDIRECT_URL
+              value: {{ .Values.app.oidc.redirectUrl | quote }}
+            - name: OIDC_GROUPS_CLAIM
+              value: {{ .Values.app.oidc.groupsClaim | quote }}
+            {{- end }}
+            # ── SAML ────────────────────────────────────────────────────────
+            {{- if .Values.app.saml.enabled }}
+            - name: SAML_IDP_METADATA_URL
+              value: {{ .Values.app.saml.idpMetadataUrl | quote }}
+            - name: SAML_SP_ENTITY_ID
+              value: {{ .Values.app.saml.spEntityId | quote }}
+            - name: SAML_SP_ACS_URL
+              value: {{ .Values.app.saml.spAcsUrl | quote }}
+            - name: SAML_SP_CERT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kwakeup.samlSecretName" . }}
+                  key: {{ .Values.app.saml.secretKeys.cert }}
+            - name: SAML_SP_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "kwakeup.samlSecretName" . }}
+                  key: {{ .Values.app.saml.secretKeys.key }}
             {{- end }}
             # ── Extra env vars ───────────────────────────────────────────────
             {{- range $key, $value := .Values.app.env }}
