@@ -1,7 +1,7 @@
 replicaCount: 1
 image:
   repository: ghcr.io/yourorg/kwakeup
-  tag: "1.0.1"
+  tag: "1.0.2"
   pullPolicy: IfNotPresent
 imagePullSecrets: []
 nameOverride: ""
@@ -69,7 +69,6 @@ pdb:
 # ── Application configuration ────────────────────────────────────────────────
 app:
   logLevel: info
-
   # Encryption key for secrets stored in the database (cloud account credentials).
   # Leave value empty to auto-generate a random key on first install.
   # Set existingSecret to skip Secret creation and reference a pre-existing Secret instead.
@@ -77,7 +76,6 @@ app:
     value: ""
     existingSecret: ""
     secretKey: encryption-key
-
   # Bootstrap admin — used only on the very first startup when the DB is empty.
   # Credentials are stored in a Secret; never set these in plaintext for production
   # — use existingSecret instead.
