@@ -1,8 +1,8 @@
 apiVersion: v2
 name: kwakeup
 description: >
-  Helm chart for kwakeup — a cloud resource scheduler that starts and stops
-  EC2 instances, RDS clusters, Kubernetes workloads, and more on a schedule.
+  Helm chart for kwakeup — a cloud resource scheduler that starts and stops EC2 instances, RDS clusters, Kubernetes workloads, and more on a schedule.
+
 type: application
 version: 0.2.0
 appVersion: "1.0.0"

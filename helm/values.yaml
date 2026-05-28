@@ -1,14 +1,11 @@
 replicaCount: 1
-
 image:
   repository: ghcr.io/yourorg/kwakeup
-  tag: ""
+  tag: "1.0.0"
   pullPolicy: IfNotPresent
-
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
-
 # ── Service account ─────────────────────────────────────────────────────────
 serviceAccount:
   create: true
@@ -17,36 +14,32 @@ serviceAccount:
   annotations: {}
   # Override the generated name. Defaults to the chart fullname.
   name: ""
-
 # ── Pod configuration ────────────────────────────────────────────────────────
 podAnnotations: {}
-  # prometheus.io/scrape: "true"
-  # prometheus.io/port: "8080"
+# prometheus.io/scrape: "true"
+# prometheus.io/port: "8080"
 
 podSecurityContext:
   runAsNonRoot: true
-  runAsUser: 65534    # nobody
+  runAsUser: 65534 # nobody
   fsGroup: 65534
-
 securityContext:
   allowPrivilegeEscalation: false
   readOnlyRootFilesystem: true
   capabilities:
     drop: [ALL]
-
 # ── Service ──────────────────────────────────────────────────────────────────
 service:
   type: ClusterIP
   port: 8080
-
 # ── Ingress ──────────────────────────────────────────────────────────────────
 ingress:
   enabled: false
   # Ingress class (replaces the deprecated kubernetes.io/ingress.class annotation)
   className: ""
   annotations: {}
-    # cert-manager.io/cluster-issuer: letsencrypt-prod
-    # nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  # cert-manager.io/cluster-issuer: letsencrypt-prod
+  # nginx.ingress.kubernetes.io/ssl-redirect: "true"
   hosts:
     - host: chart-example.local
       paths:
@@ -56,7 +49,6 @@ ingress:
   # - secretName: kwakeup-tls
   #   hosts:
   #     - chart-example.local
-
 # ── Resource requests/limits ─────────────────────────────────────────────────
 # No CPU limit intentionally — avoids throttling. Set one if your cluster
 # enforces LimitRange policies.
@@ -66,21 +58,17 @@ resources:
     memory: 128Mi
   limits:
     memory: 256Mi
-
 # ── Scheduling ───────────────────────────────────────────────────────────────
 nodeSelector: {}
 tolerations: []
 affinity: {}
-
 # ── PodDisruptionBudget ──────────────────────────────────────────────────────
 pdb:
   enabled: false
   minAvailable: 1
-
 # ── Application configuration ────────────────────────────────────────────────
 app:
   logLevel: info
-
   # Bootstrap admin — used only on the very first startup when the DB is empty.
   # Credentials are stored in a Secret; never set these in plaintext for production
   # — use existingSecret instead.
@@ -93,7 +81,6 @@ app:
     secretKeys:
       email: bootstrap-admin-email
       password: bootstrap-admin-password
-
   # OIDC / SSO (optional)
   oidc:
     enabled: false
@@ -103,18 +90,15 @@ app:
     clientSecret: ""
     existingSecret: ""
     secretKey: oidc-client-secret
-
   # Freeform extra environment variables injected into the app container.
   # Example:
   #   SCAN_MIN_RETENTION_RATIO: "0.8"
   #   SCAN_INTERVAL_MINUTES: "30"
   env: {}
-
   # envFrom sources (ConfigMaps or Secrets) mounted wholesale.
   envFrom: []
   # - secretRef:
   #     name: my-app-secrets
-
 # ── Built-in PostgreSQL ───────────────────────────────────────────────────────
 # For development and quick-start only. For production use an external managed
 # database and configure `database.dsn` or `database.secretName`.
@@ -125,7 +109,7 @@ postgres:
     tag: "16-alpine"
     pullPolicy: IfNotPresent
   postgresUser: kwakeup
-  postgresPassword: "changeme"   # ← change this
+  postgresPassword: "changeme" # ← change this
   postgresDatabase: kwakeupdb
   service:
     port: 5432
@@ -133,7 +117,7 @@ postgres:
     enabled: true
     accessMode: ReadWriteOnce
     size: 8Gi
-    storageClassName: ""   # leave empty to use the cluster default
+    storageClassName: "" # leave empty to use the cluster default
   resources:
     requests:
       cpu: 100m
@@ -142,9 +126,8 @@ postgres:
       memory: 512Mi
   podSecurityContext:
     runAsNonRoot: true
-    runAsUser: 999    # postgres
+    runAsUser: 999 # postgres
     fsGroup: 999
-
 # ── External database ────────────────────────────────────────────────────────
 database:
   # Full DSN passed as a plaintext env var (not recommended for production).
