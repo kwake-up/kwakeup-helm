@@ -33,21 +33,22 @@ spec:
             - containerPort: {{ .Values.postgres.service.port }}
               name: postgres
               protocol: TCP
+          {{- $pgSecretName := .Values.postgres.existingSecret | default (printf "%s-postgres" (include "kwakeup.fullname" .)) }}
           env:
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "kwakeup.fullname" . }}-postgres
+                  name: {{ $pgSecretName }}
                   key: postgres-user
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "kwakeup.fullname" . }}-postgres
+                  name: {{ $pgSecretName }}
                   key: postgres-password
             - name: POSTGRES_DB
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "kwakeup.fullname" . }}-postgres
+                  name: {{ $pgSecretName }}
                   key: postgres-db
             # Use a subdirectory so Postgres does not refuse to init because
             # the parent mountpoint is non-empty (lost+found, etc.).

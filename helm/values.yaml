@@ -164,7 +164,9 @@ postgres:
     tag: "16-alpine"
     pullPolicy: IfNotPresent
   postgresUser: kwakeup
-  postgresPassword: "changeme"   # ← change this
+  existingSecret: ""    # name of an existing secret; if set, the chart does not create its own secret.
+                        # the secret must contain keys: postgres-user, postgres-password, postgres-db, dsn
+  postgresPassword: ""  # leave empty to auto-generate a random password on first install (ignored when existingSecret is set)
   postgresDatabase: kwakeupdb
   service:
     port: 5432

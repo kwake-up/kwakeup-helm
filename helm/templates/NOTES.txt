@@ -28,7 +28,7 @@ Namespace: {{ .Release.Namespace }}
 {{- end }}
 
 ── Warnings ────────────────────────────────────────────────
-{{- if and .Values.postgres.enabled (eq .Values.postgres.postgresPassword "changeme") }}
+{{- if and .Values.postgres.enabled (not .Values.postgres.existingSecret) (eq .Values.postgres.postgresPassword "changeme") }}
 
   ⚠  INSECURE: postgres.postgresPassword is still "changeme".
      Set a strong password before deploying to production.

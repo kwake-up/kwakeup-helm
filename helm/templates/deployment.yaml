@@ -47,6 +47,11 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.database.secretName }}
                   key: {{ .Values.database.secretKey }}
+            {{- else if and .Values.postgres.enabled .Values.postgres.existingSecret }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.existingSecret }}
+                  key: dsn
             {{- else if .Values.postgres.enabled }}
               valueFrom:
                 secretKeyRef:
