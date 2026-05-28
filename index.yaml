@@ -3,6 +3,31 @@ entries:
   kwakeup:
   - apiVersion: v2
     appVersion: 1.0.2
+    created: "2026-05-28T13:44:13.892120615Z"
+    description: 'Helm chart for kwakeup — a cloud resource scheduler that starts
+      and stops EC2 instances, RDS clusters, Kubernetes workloads, and more on a schedule. '
+    digest: 2cd3efebbcb1134fdef363e706bd963c25a64f023f171ea734225754a550721c
+    home: https://kwakeup.net
+    keywords:
+    - cloud
+    - scheduler
+    - cost-saving
+    - aws
+    - gcp
+    - azure
+    - kubernetes
+    maintainers:
+    - email: support@kwakeup.net
+      name: kwakeup
+    name: kwakeup
+    sources:
+    - https://github.com/kwake-up/kwakeup-helm
+    type: application
+    urls:
+    - https://github.com/kwake-up/kwakeup-helm/releases/download/kwakeup-1.0.4/kwakeup-1.0.4.tgz
+    version: 1.0.4
+  - apiVersion: v2
+    appVersion: 1.0.2
     created: "2026-05-28T13:11:52.994543518Z"
     description: 'Helm chart for kwakeup — a cloud resource scheduler that starts
       and stops EC2 instances, RDS clusters, Kubernetes workloads, and more on a schedule. '
@@ -101,4 +126,4 @@ entries:
     urls:
     - https://github.com/kwake-up/kwakeup-helm/releases/download/kwakeup-1.0.0/kwakeup-1.0.0.tgz
     version: 1.0.0
-generated: "2026-05-28T13:11:52.994552982Z"
+generated: "2026-05-28T13:44:13.892146655Z"
