@@ -158,7 +158,7 @@ app:
 # For development and quick-start only. For production use an external managed
 # database and configure `database.dsn` or `database.secretName`.
 postgres:
-  enabled: false
+  enabled: true
   image:
     repository: postgres
     tag: "16-alpine"

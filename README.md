@@ -12,7 +12,6 @@
 
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
-- [Mandatory Values](#mandatory-values)
 - [Installation](#installation)
   - [Minimal Production Install](#minimal-production-install)
   - [Development Install (Built-in Postgres)](#development-install-built-in-postgres)
@@ -52,49 +51,19 @@
 
 ```bash
 helm upgrade --install kwakeup oci://ghcr.io/kwake-up/kwakeup-helm \
+  --namespace kwakeup --create-namespace \
   --set app.bootstrapAdmin.email=admin@example.com \
-  --set app.bootstrapAdmin.password=changeme \
-  --set database.dsn="host=db.example.com port=5432 user=kwakeup password=secret dbname=kwakeup sslmode=require"
+  --set app.bootstrapAdmin.password=changeme
 ```
 
-> For production, use a values file and reference Kubernetes secrets instead of inline plaintext values. See [Mandatory Values](#mandatory-values).
+The built-in PostgreSQL is enabled by default. The bootstrap admin password auto-generates if omitted — retrieve it with:
 
----
-
-## Mandatory Values
-
-The chart will not function correctly without the following:
-
-| Value | Description |
-|---|---|
-| `app.bootstrapAdmin.email` **or** `app.bootstrapAdmin.existingSecret` | Email of the first admin user (created on first startup when the database is empty) |
-| `app.bootstrapAdmin.password` **or** `app.bootstrapAdmin.existingSecret` | Password for the first admin user |
-| One of: `database.secretName`, `database.dsn`, or `postgres.enabled: true` | Database connection — without this the application cannot start |
-
-Everything else has a safe default. A minimal `values.yaml` looks like:
-
-```yaml
-app:
-  bootstrapAdmin:
-    email: admin@example.com
-    existingSecret: kwakeup-bootstrap  # pre-created Secret
-
-database:
-  secretName: kwakeup-db-dsn           # pre-created Secret containing the DSN
-
-ingress:
-  enabled: true
-  className: nginx
-  hosts:
-    - host: kwakeup.example.com
-      paths:
-        - path: /
-          pathType: Prefix
-  tls:
-    - secretName: kwakeup-tls
-      hosts:
-        - kwakeup.example.com
+```bash
+kubectl get secret kwakeup-bootstrap -n kwakeup \
+  -o jsonpath='{.data.bootstrap-admin-password}' | base64 -d
 ```
+
+> For production, disable the built-in postgres, point the app at a managed database, and reference secrets externally. See [Installation](#installation).
 
 ---
 
@@ -154,17 +123,9 @@ helm upgrade --install kwakeup oci://ghcr.io/kwake-up/kwakeup-helm \
 
 ---
 
-### Development Install (Built-in Postgres)
+### Default Install (Built-in Postgres)
 
-Deploys a single-node PostgreSQL StatefulSet alongside the application. **Not suitable for production.**
-
-```bash
-helm upgrade --install kwakeup oci://ghcr.io/kwake-up/kwakeup-helm \
-  --namespace kwakeup --create-namespace \
-  --set postgres.enabled=true \
-  --set app.bootstrapAdmin.email=admin@example.com \
-  --set app.bootstrapAdmin.password=changeme
-```
+The built-in PostgreSQL StatefulSet is **enabled by default**, so a bare `helm install` gives a fully working application. This is convenient for evaluation and development; for production, replace it with a managed external database (see [Database](#database)).
 
 The postgres password is auto-generated on first install and persisted across upgrades. To retrieve it:
 
@@ -245,11 +206,11 @@ database:
   dsn: "host=db.example.com port=5432 user=kwakeup password=secret dbname=kwakeup sslmode=require"
 ```
 
-#### Option C — Built-in PostgreSQL (development only)
+#### Option C — Built-in PostgreSQL (default, development only)
 
 ```yaml
 postgres:
-  enabled: true
+  enabled: true  # default
   postgresUser: kwakeup
   postgresPassword: ""      # auto-generated if empty
   postgresDatabase: kwakeupdb
