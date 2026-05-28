@@ -4,7 +4,7 @@ description: >
   Helm chart for kwakeup — a cloud resource scheduler that starts and stops EC2 instances, RDS clusters, Kubernetes workloads, and more on a schedule.
 
 type: application
-version: 1.0.3
+version: 1.0.4
 appVersion: "1.0.2"
 keywords:
   - cloud
