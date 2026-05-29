@@ -141,10 +141,16 @@ postgres:
     repository: postgres
     tag: "16-alpine"
     pullPolicy: IfNotPresent
-  postgresUser: kwakeup
+  # postgresUser is the PostgreSQL superuser created by POSTGRES_USER.
+  # It is only used for database initialisation and should NOT be the app user.
+  postgresUser: postgres
+  postgresPassword: "" # leave empty to auto-generate; ignored when existingSecret is set
+  # appUser is the non-superuser role the kwakeup application connects as.
+  # An init script creates it and grants it ownership of postgresDatabase.
+  appUser: kwakeup
+  appPassword: "" # leave empty to auto-generate; ignored when existingSecret is set
   existingSecret: "" # name of an existing secret; if set, the chart does not create its own secret.
-  # the secret must contain keys: postgres-user, postgres-password, postgres-db, dsn
-  postgresPassword: "" # leave empty to auto-generate a random password on first install (ignored when existingSecret is set)
+  # the secret must contain keys: postgres-user, postgres-password, postgres-db, app-user, app-password, dsn
   postgresDatabase: kwakeupdb
   service:
     port: 5432

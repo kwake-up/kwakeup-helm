@@ -50,6 +50,18 @@ spec:
                 secretKeyRef:
                   name: {{ $pgSecretName }}
                   key: postgres-db
+            # APP_USER / APP_PASSWORD are consumed by the init script only.
+            # They are never used by the postgres process itself.
+            - name: APP_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $pgSecretName }}
+                  key: app-user
+            - name: APP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $pgSecretName }}
+                  key: app-password
             # Use a subdirectory so Postgres does not refuse to init because
             # the parent mountpoint is non-empty (lost+found, etc.).
             - name: PGDATA
@@ -57,6 +69,11 @@ spec:
           volumeMounts:
             - name: postgres-data
               mountPath: /var/lib/postgresql/data
+            {{- if not .Values.postgres.existingSecret }}
+            - name: postgres-init
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+            {{- end }}
           livenessProbe:
             exec:
               command:
@@ -79,6 +96,20 @@ spec:
             timeoutSeconds: 3
           resources:
             {{- toYaml .Values.postgres.resources | nindent 12 }}
+      {{- $needsVolumes := or (not .Values.postgres.existingSecret) (not .Values.postgres.persistence.enabled) }}
+      {{- if $needsVolumes }}
+      volumes:
+        {{- if not .Values.postgres.existingSecret }}
+        - name: postgres-init
+          configMap:
+            name: {{ include "kwakeup.fullname" . }}-postgres-init
+            defaultMode: 0755
+        {{- end }}
+        {{- if not .Values.postgres.persistence.enabled }}
+        - name: postgres-data
+          emptyDir: {}
+        {{- end }}
+      {{- end }}
   {{- if .Values.postgres.persistence.enabled }}
   volumeClaimTemplates:
     - metadata:
@@ -94,9 +125,5 @@ spec:
         {{- if .Values.postgres.persistence.storageClassName }}
         storageClassName: {{ .Values.postgres.persistence.storageClassName }}
         {{- end }}
-  {{- else }}
-      volumes:
-        - name: postgres-data
-          emptyDir: {}
   {{- end }}
 {{- end }}
