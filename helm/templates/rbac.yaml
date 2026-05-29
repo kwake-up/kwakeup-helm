@@ -1,0 +1,30 @@
+{{- if .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "kwakeup.fullname" . }}-scanner
+  labels:
+    {{- include "kwakeup.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets"]
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale", "statefulsets/scale"]
+    verbs: ["get", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "kwakeup.fullname" . }}-scanner
+  labels:
+    {{- include "kwakeup.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "kwakeup.fullname" . }}-scanner
+subjects:
+  - kind: Group
+    name: kwakeup-scanner
+    apiGroup: rbac.authorization.k8s.io
+{{- end }}

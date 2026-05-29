@@ -6,6 +6,14 @@ image:
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
+# ── RBAC ─────────────────────────────────────────────────────────────────────
+rbac:
+  # Creates a ClusterRole and ClusterRoleBinding granting the kwakeup-scanner
+  # group list/get access to Deployments and StatefulSets (and their scale
+  # subresource). Required when kwakeup scans the cluster it is deployed in.
+  # Set to false to manage RBAC externally or if this cluster is not scanned.
+  # For remote EKS clusters, apply the same RBAC manually — see the README.
+  create: true
 # ── Service account ─────────────────────────────────────────────────────────
 serviceAccount:
   create: true

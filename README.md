@@ -18,6 +18,7 @@
 - [Configuration Reference](#configuration-reference)
   - [Image](#image)
   - [Service Account](#service-account)
+  - [RBAC](#rbac)
   - [Ingress](#ingress)
   - [Database](#database)
   - [Encryption Key](#encryption-key)
@@ -165,7 +166,18 @@ serviceAccount:
   annotations: {}   # used for cloud IAM binding — see Cloud Provider Setup
 ```
 
-`automountServiceAccountToken` is set to `false` on both the ServiceAccount and the Pod. The application does not call the Kubernetes API directly; re-enable only if you extend it with an operator pattern.
+`automountServiceAccountToken` is set to `false` on both the ServiceAccount and the Pod. kwakeup connects to Kubernetes clusters using short-lived tokens obtained from the cloud provider (IRSA on EKS, Workload Identity on GKE/AKS), not via the in-cluster service account token.
+
+### RBAC
+
+```yaml
+rbac:
+  create: true   # set to false to manage ClusterRole/ClusterRoleBinding externally
+```
+
+When `rbac.create` is `true` (the default), the chart creates a `ClusterRole` and `ClusterRoleBinding` that grant the `kwakeup-scanner` Kubernetes group permission to list Deployments and StatefulSets (and their `scale` subresource) across the cluster. This is required for kwakeup to scan and schedule workloads in the cluster where it is installed.
+
+For remote clusters kwakeup should also scan, apply the same RBAC manually — see [AWS (EKS)](#aws-eks).
 
 ### Ingress
 
@@ -486,6 +498,59 @@ serviceAccount:
   annotations:
     eks.amazonaws.com/role-arn: arn:aws:iam::<account-id>:role/kwakeup-role
 ```
+
+#### 5. Grant Kubernetes RBAC on each scanned EKS cluster
+
+For every EKS cluster kwakeup should scan, the IAM role must be mapped to the `kwakeup-scanner` Kubernetes group via an EKS access entry, and that group needs RBAC permission to list workloads.
+
+**Cluster where kwakeup is installed** — the chart handles the ClusterRole and ClusterRoleBinding automatically (`rbac.create: true` by default). You only need to create the access entry:
+
+```bash
+aws eks create-access-entry \
+  --cluster-name <cluster-name> \
+  --principal-arn arn:aws:iam::<account-id>:role/kwakeup-role \
+  --kubernetes-groups kwakeup-scanner
+```
+
+**Each additional cluster** kwakeup should scan — create the access entry AND apply the RBAC manifest:
+
+```bash
+aws eks create-access-entry \
+  --cluster-name <target-cluster-name> \
+  --principal-arn arn:aws:iam::<account-id>:role/kwakeup-role \
+  --kubernetes-groups kwakeup-scanner
+```
+
+```bash
+kubectl --context <target-cluster-context> apply -f - <<'EOF'
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kwakeup-scanner
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets"]
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments/scale", "statefulsets/scale"]
+    verbs: ["get", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kwakeup-scanner
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kwakeup-scanner
+subjects:
+  - kind: Group
+    name: kwakeup-scanner
+    apiGroup: rbac.authorization.k8s.io
+EOF
+```
+
+> **Why two steps?** The EKS access entry (AWS-side) maps the IAM role to the `kwakeup-scanner` Kubernetes group. The ClusterRoleBinding (Kubernetes-side) grants that group the actual permissions. Both are required in every cluster kwakeup scans.
 
 #### Cross-account scheduling
 
