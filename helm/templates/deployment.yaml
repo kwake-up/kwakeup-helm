@@ -27,6 +27,23 @@ spec:
       automountServiceAccountToken: false
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.postgres.enabled }}
+      initContainers:
+        - name: wait-for-postgres
+          image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
+          imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          command:
+            - sh
+            - -c
+            - |
+              until pg_isready -h {{ include "kwakeup.fullname" . }}-postgres -p {{ .Values.postgres.service.port }}; do
+                echo "waiting for postgres"; sleep 2
+              done
+      {{- end }}
       containers:
         - name: server
           image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}"
