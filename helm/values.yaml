@@ -160,5 +160,5 @@ database:
   secretName: ""
   secretKey: db_dsn
   # For local dev only — plaintext DSN injected directly as an env var.
-  # Example: "host=db.example.com port=5432 user=kwakeup password=secret dbname=kwakeup sslmode=require"
+  # Example: "host=db.example.com port=5432 user=kwakeup password=secret dbname=kwakeup sslmode=disable"
   dsn: ""
