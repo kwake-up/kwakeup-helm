@@ -28,11 +28,6 @@ Namespace: {{ .Release.Namespace }}
 {{- end }}
 
 ── Warnings ────────────────────────────────────────────────
-{{- if and .Values.postgres.enabled (not .Values.postgres.existingSecret) (eq .Values.postgres.postgresPassword "changeme") }}
-
-  ⚠  INSECURE: postgres.postgresPassword is still "changeme".
-     Set a strong password before deploying to production.
-{{- end }}
 {{- if not .Values.app.bootstrapAdmin.email }}
 
   ℹ  No bootstrap admin configured.
@@ -40,12 +35,9 @@ Namespace: {{ .Release.Namespace }}
      (or app.bootstrapAdmin.existingSecret) to create the first
      admin user on startup.
 {{- end }}
-{{- if and (not .Values.database.secretName) (not .Values.postgres.enabled) (not .Values.database.dsn) }}
+{{- if .Values.database.dsn }}
 
-  ⚠  No database configured. Set one of:
-       database.secretName  — references a pre-existing Secret (recommended)
-       database.dsn         — plaintext DSN (dev only)
-       postgres.enabled     — bundled PostgreSQL (dev/test only)
+  ⚠  database.dsn is set as plaintext. Use database.secretName in production.
 {{- end }}
 
 ── IRSA (AWS) ──────────────────────────────────────────────

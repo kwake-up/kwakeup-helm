@@ -1,3 +1,6 @@
+{{- if and (not .Values.database.secretName) (not .Values.database.dsn) }}
+{{- fail "Either database.secretName or database.dsn is required" }}
+{{- end }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -27,23 +30,6 @@ spec:
       automountServiceAccountToken: false
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
-      {{- if .Values.postgres.enabled }}
-      initContainers:
-        - name: wait-for-postgres
-          image: "{{ .Values.postgres.image.repository }}:{{ .Values.postgres.image.tag }}"
-          imagePullPolicy: {{ .Values.postgres.image.pullPolicy }}
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: [ALL]
-          command:
-            - sh
-            - -c
-            - |
-              until pg_isready -h {{ include "kwakeup.fullname" . }}-postgres -p {{ .Values.postgres.service.port }}; do
-                echo "waiting for postgres"; sleep 2
-              done
-      {{- end }}
       containers:
         - name: server
           image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}"
@@ -64,16 +50,6 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.database.secretName }}
                   key: {{ .Values.database.secretKey }}
-            {{- else if and .Values.postgres.enabled .Values.postgres.existingSecret }}
-              valueFrom:
-                secretKeyRef:
-                  name: {{ .Values.postgres.existingSecret }}
-                  key: dsn
-            {{- else if .Values.postgres.enabled }}
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "kwakeup.fullname" . }}-postgres
-                  key: dsn
             {{- else }}
               value: {{ .Values.database.dsn | quote }}
             {{- end }}
@@ -126,9 +102,6 @@ spec:
               value: {{ .Values.app.scan.minRetentionRatio | quote }}
             # ── Kubernetes exempt workloads ──────────────────────────────────
             {{- $exempt := list (include "kwakeup.fullname" .) }}
-            {{- if .Values.postgres.enabled }}
-            {{- $exempt = append $exempt (printf "%s-postgres" (include "kwakeup.fullname" .)) }}
-            {{- end }}
             {{- range .Values.k8s.exemptWorkloads }}
             {{- $exempt = append $exempt . }}
             {{- end }}
