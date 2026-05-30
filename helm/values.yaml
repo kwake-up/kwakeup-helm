@@ -6,6 +6,18 @@ image:
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
+# ── Kubernetes workload scanning ─────────────────────────────────────────────
+k8s:
+  # exemptWorkloads is a list of glob patterns (path.Match syntax) matched
+  # against bare workload names. Matching Deployments/StatefulSets are never
+  # returned by the scanner and will not appear in resource groups.
+  # The kwakeup deployment and built-in postgres StatefulSet are always added
+  # automatically — no need to list them here.
+  exemptWorkloads: []
+  # Examples:
+  # exemptWorkloads:
+  #   - "kube-*"
+  #   - "cert-manager"
 # ── RBAC ─────────────────────────────────────────────────────────────────────
 rbac:
   # Creates a ClusterRole and ClusterRoleBinding granting the kwakeup-scanner

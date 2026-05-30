@@ -124,6 +124,16 @@ spec:
               value: {{ .Values.app.scan.intervalMinutes | quote }}
             - name: SCAN_MIN_RETENTION_RATIO
               value: {{ .Values.app.scan.minRetentionRatio | quote }}
+            # ── Kubernetes exempt workloads ──────────────────────────────────
+            {{- $exempt := list (include "kwakeup.fullname" .) }}
+            {{- if .Values.postgres.enabled }}
+            {{- $exempt = append $exempt (printf "%s-postgres" (include "kwakeup.fullname" .)) }}
+            {{- end }}
+            {{- range .Values.k8s.exemptWorkloads }}
+            {{- $exempt = append $exempt . }}
+            {{- end }}
+            - name: K8S_EXEMPT_WORKLOADS
+              value: {{ join "," $exempt | quote }}
             # ── Bootstrap admin ─────────────────────────────────────────────
             {{- if .Values.app.bootstrapAdmin.email }}
             - name: BOOTSTRAP_ADMIN_EMAIL
