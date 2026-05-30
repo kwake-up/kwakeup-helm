@@ -50,28 +50,22 @@
 
 ## Quick Start
 
+Generate the required secrets first, then install:
+
 ```bash
+POSTGRES_PASSWORD=$(openssl rand -base64 18)
+APP_PASSWORD=$(openssl rand -base64 18)
+ENCRYPTION_KEY=$(openssl rand -hex 32)
+
 helm upgrade --install kwakeup oci://ghcr.io/kwake-up/kwakeup-helm \
-  --namespace kwakeup --create-namespace 
+  --namespace kwakeup --create-namespace \
+  --set postgres.postgresPassword="$POSTGRES_PASSWORD" \
+  --set postgres.appPassword="$APP_PASSWORD" \
+  --set app.encryptionKey.value="$ENCRYPTION_KEY" \
+  --set app.bootstrapAdmin.email="admin@example.com"
 ```
 
-The built-in PostgreSQL is enabled by default. The bootstrap admin password and encryption key auto-generate if omitted — retrieve them with:
-
-```bash
-# Bootstrap admin email
-kubectl get secret kwakeup-bootstrap -n kwakeup \
-  -o jsonpath='{.data.bootstrap-admin-email}' | base64 -d
-
-# Bootstrap admin password
-kubectl get secret kwakeup-bootstrap -n kwakeup \
-  -o jsonpath='{.data.bootstrap-admin-password}' | base64 -d
-
-# Encryption key (protects stored cloud credentials — back this up)
-kubectl get secret kwakeup-encryption -n kwakeup \
-  -o jsonpath='{.data.encryption-key}' | base64 -d
-```
-
-> For production, disable the built-in postgres, point the app at a managed database, and reference secrets externally. See [Installation](#installation).
+> **Back up `ENCRYPTION_KEY`** — losing it makes all stored cloud credentials unrecoverable. For production use `app.encryptionKey.existingSecret` instead. See [Installation](#installation).
 
 ---
 
@@ -225,13 +219,17 @@ database:
   dsn: "host=db.example.com port=5432 user=kwakeup password=secret dbname=kwakeup sslmode=require"
 ```
 
-#### Option C — Built-in PostgreSQL (default, development only)
+#### Option C — Built-in PostgreSQL (default)
+
+`postgres.postgresPassword` and `postgres.appPassword` are **required** when `postgres.enabled=true` and `postgres.existingSecret` is not set — the chart will fail to render without them.
 
 ```yaml
 postgres:
-  enabled: true  # default
-  postgresUser: kwakeup
-  postgresPassword: ""      # auto-generated if empty
+  enabled: true
+  postgresUser: postgres
+  postgresPassword: "<superuser-password>"   # required
+  appUser: kwakeup
+  appPassword: "<app-user-password>"         # required
   postgresDatabase: kwakeupdb
   persistence:
     enabled: true
@@ -239,7 +237,7 @@ postgres:
     storageClassName: ""    # uses cluster default if empty
 ```
 
-To use an existing secret for the built-in postgres credentials, create a secret with keys `postgres-user`, `postgres-password`, `postgres-db`, and `dsn`, then set:
+To use a pre-existing secret instead, create it with keys `postgres-user`, `postgres-password`, `postgres-db`, `app-user`, `app-password`, and `dsn`, then set:
 
 ```yaml
 postgres:
@@ -251,19 +249,26 @@ postgres:
 
 The encryption key protects cloud account credentials stored in the database. **Losing this key makes stored credentials unrecoverable.**
 
+`app.encryptionKey.value` or `app.encryptionKey.existingSecret` is **required** — the chart will fail to render without one.
+
+**Option A — inline value:**
+
+```bash
+# Generate a strong key
+openssl rand -hex 32
+```
+
 ```yaml
 app:
   encryptionKey:
-    value: ""                  # auto-generates a 64-char key on first install
-    existingSecret: ""         # reference a pre-existing Secret (recommended)
-    secretKey: encryption-key  # key inside the Secret
+    value: "<your-64-char-hex-key>"
 ```
 
-Auto-generated keys are persisted across upgrades via `helm.sh/resource-policy: keep` and a `lookup` check. For production, manage this key in your secret manager and reference it:
+**Option B — pre-existing Secret (recommended for production):**
 
 ```bash
 kubectl create secret generic kwakeup-encryption \
-  --from-literal=encryption-key='<your-64-char-key>'
+  --from-literal=encryption-key="$(openssl rand -hex 32)"
 ```
 
 ```yaml
