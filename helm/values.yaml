@@ -116,8 +116,8 @@ app:
   # Credentials are stored in a Secret; never set these in plaintext for production
   # — use existingSecret instead.
   bootstrapAdmin:
-    email: ""
-    password: ""
+    email: ""         # set to create the initial admin user
+    password: ""      # REQUIRED when email is set and existingSecret is not set
     existingSecret: ""
     secretKeys:
       email: bootstrap-admin-email
