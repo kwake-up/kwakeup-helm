@@ -1,7 +1,7 @@
 replicaCount: 1
 image:
   repository: ghcr.io/kwake-up/kwakeup
-  tag: "v1.0.8"
+  tag: "v1.0.9"
   pullPolicy: IfNotPresent
 imagePullSecrets: []
 nameOverride: ""
@@ -95,7 +95,7 @@ app:
   # Leave value empty to auto-generate a random key on first install.
   # Set existingSecret to skip Secret creation and reference a pre-existing Secret instead.
   encryptionKey:
-    value: ""          # REQUIRED unless existingSecret is set. Generate with: openssl rand -hex 32
+    value: "" # REQUIRED unless existingSecret is set. Generate with: openssl rand -hex 32
     existingSecret: "" # set to use a pre-existing Secret instead of creating one
     secretKey: encryption-key
   # Session TTLs (Go duration strings: e.g. 30m, 8h, 24h).
@@ -116,8 +116,8 @@ app:
   # Credentials are stored in a Secret; never set these in plaintext for production
   # — use existingSecret instead.
   bootstrapAdmin:
-    email: ""         # set to create the initial admin user
-    password: ""      # REQUIRED when email is set and existingSecret is not set
+    email: "" # set to create the initial admin user
+    password: "" # REQUIRED when email is set and existingSecret is not set
     existingSecret: ""
     secretKeys:
       email: bootstrap-admin-email
