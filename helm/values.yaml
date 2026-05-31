@@ -152,9 +152,44 @@ app:
   envFrom: []
   # - secretRef:
   #     name: my-app-secrets
-# ── Database ──────────────────────────────────────────────────────────────────
-# One of database.secretName or database.dsn is required — the chart fails
-# to render without it.
+# ── Built-in PostgreSQL ───────────────────────────────────────────────────────
+# For development and quick-start only. For production use an external managed
+# database and configure `database.dsn` or `database.secretName`.
+postgres:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "16-alpine"
+    pullPolicy: IfNotPresent
+  # postgresUser is the PostgreSQL superuser created by POSTGRES_USER.
+  # It is only used for database initialisation and should NOT be the app user.
+  postgresUser: postgres
+  postgresPassword: "" # REQUIRED unless existingSecret is set. Superuser password.
+  # appUser is the non-superuser role the kwakeup application connects as.
+  # An init script creates it and grants it ownership of postgresDatabase.
+  appUser: kwakeup
+  appPassword: ""     # REQUIRED unless existingSecret is set. App user password.
+  existingSecret: ""  # set to use a pre-existing Secret instead of creating one.
+  # the secret must contain keys: postgres-user, postgres-password, postgres-db, app-user, app-password, dsn
+  postgresDatabase: kwakeupdb
+  service:
+    port: 5432
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    size: 8Gi
+    storageClassName: ""
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 999 # postgres
+    fsGroup: 999
+# ── External database ────────────────────────────────────────────────────────
 database:
   # Recommended: reference a pre-existing Secret (key must contain the full DSN).
   secretName: ""
