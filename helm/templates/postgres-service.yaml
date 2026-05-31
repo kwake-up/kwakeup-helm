@@ -1,0 +1,38 @@
+{{- if .Values.postgres.enabled }}
+# Headless service — gives the StatefulSet pod a stable DNS name
+# (<pod>.<release>-kwakeup-postgres-headless.<namespace>.svc.cluster.local).
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kwakeup.fullname" . }}-postgres-headless
+  labels:
+    {{- include "kwakeup.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  ports:
+    - port: {{ .Values.postgres.service.port }}
+      targetPort: postgres
+      protocol: TCP
+      name: postgres
+  selector:
+    app.kubernetes.io/name: {{ include "kwakeup.fullname" . }}-postgres
+    app.kubernetes.io/instance: {{ .Release.Name }}
+---
+# ClusterIP service — stable address used by the app (referenced in the DSN).
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kwakeup.fullname" . }}-postgres
+  labels:
+    {{- include "kwakeup.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.postgres.service.port }}
+      targetPort: postgres
+      protocol: TCP
+      name: postgres
+  selector:
+    app.kubernetes.io/name: {{ include "kwakeup.fullname" . }}-postgres
+    app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
